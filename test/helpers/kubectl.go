@@ -43,7 +43,7 @@ const (
 	// KubectlCmd Kubernetes controller command
 	KubectlCmd    = "kubectl"
 	kubeDNSLabel  = "k8s-app=kube-dns"
-	operatorLabel = "io.cilium/app=operator"
+	OperatorLabel = "io.cilium/app=operator"
 
 	// DNSHelperTimeout is a predefined timeout value for K8s DNS commands. It
 	// must be larger than 5 minutes because kubedns has a hardcoded resync
@@ -813,6 +813,22 @@ func (kub *Kubectl) CreateSecret(secretType, name, namespace, args string) *CmdR
 	kub.Logger().Debug(fmt.Sprintf("creating secret %s in namespace %s", name, namespace))
 	kub.ExecShort(fmt.Sprintf("kubectl delete secret %s %s -n %s", secretType, name, namespace))
 	return kub.ExecShort(fmt.Sprintf("kubectl create secret %s %s -n %s %s", secretType, name, namespace, args))
+}
+
+// GetSecret is a wrapper around `kubernetes get secret
+// <resourceName>.
+func (kub *Kubectl) GetSecret(name, namespace string) (*v1.Secret, error) {
+	kub.Logger().Debug(fmt.Sprintf("getting secret %s in namespace %s", name, namespace))
+	res := kub.ExecShort(fmt.Sprintf("kubectl get secret %s -n %s -o json", name, namespace))
+	if !res.WasSuccessful() {
+		return nil, fmt.Errorf("cannot retrieve secret: %s", res.CombineOutput())
+	}
+	secret := &v1.Secret{}
+	err := res.Unmarshal(secret)
+	if err != nil {
+		return nil, fmt.Errorf("unable to unmarshal secret %s: %w", name, err)
+	}
+	return secret, nil
 }
 
 // ExecKafkaPodCmd executes shell command with arguments arg in the specified pod residing in the specified

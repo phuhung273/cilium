@@ -13,7 +13,7 @@ import (
 	"github.com/cilium/cilium/pkg/time"
 )
 
-const watcherEventCoalesceWindow = 100 * time.Millisecond
+const WatcherEventCoalesceWindow = 100 * time.Millisecond
 
 // Watcher is a set of TLS configuration files including CA files, and a
 // certificate along with its private key. The files are watched for change and
@@ -121,8 +121,8 @@ func (w *Watcher) Watch() <-chan struct{} {
 	// changed in order to reload only the appropriate certificates.
 	keypairMap := make(map[string]struct{})
 	caMap := make(map[string]struct{})
-	if w.FileReloader.certFile != "" {
-		keypairMap[w.FileReloader.certFile] = struct{}{}
+	if w.FileReloader.CertFile != "" {
+		keypairMap[w.FileReloader.CertFile] = struct{}{}
 	}
 	if w.FileReloader.privkeyFile != "" {
 		keypairMap[w.FileReloader.privkeyFile] = struct{}{}
@@ -150,11 +150,11 @@ func (w *Watcher) Watch() <-chan struct{} {
 
 				if keypairUpdated {
 					if keypairReload == nil {
-						keypairReload = time.After(watcherEventCoalesceWindow)
+						keypairReload = time.After(WatcherEventCoalesceWindow)
 					}
 				} else if caUpdated {
 					if caReload == nil {
-						caReload = time.After(watcherEventCoalesceWindow)
+						caReload = time.After(WatcherEventCoalesceWindow)
 					}
 				} else {
 					// fswatcher should never send events for unknown files

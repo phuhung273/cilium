@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Authors of Cilium
 
-package certloader
+package certloader_test
 
 import (
 	"crypto/tls"
@@ -12,6 +12,7 @@ import (
 	"github.com/cilium/hive/hivetest"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/cilium/cilium/pkg/crypto/certloader"
 	"github.com/cilium/cilium/pkg/testutils"
 )
 
@@ -21,11 +22,11 @@ func TestNewWatchedServerConfigErrors(t *testing.T) {
 	defer cleanup(dir)
 	logger := hivetest.Logger(t)
 
-	_, err := NewWatchedServerConfig(logger, relay.caFiles, "", hubble.privkeyFile)
-	assert.Equal(t, ErrMissingCertFile, err)
+	_, err := certloader.NewWatchedServerConfig(logger, relay.caFiles, "", hubble.privkeyFile)
+	assert.Equal(t, certloader.ErrMissingCertFile, err)
 
-	_, err = NewWatchedServerConfig(logger, relay.caFiles, hubble.certFile, "")
-	assert.Equal(t, ErrMissingPrivkeyFile, err)
+	_, err = certloader.NewWatchedServerConfig(logger, relay.caFiles, hubble.certFile, "")
+	assert.Equal(t, certloader.ErrMissingPrivkeyFile, err)
 }
 
 func TestWatchedServerConfigIsMutualTLS(t *testing.T) {
@@ -40,20 +41,20 @@ func TestWatchedServerConfigIsMutualTLS(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		constructor func() (*WatchedServerConfig, error)
+		constructor func() (*certloader.WatchedServerConfig, error)
 		isMutualTLS bool
 	}{
 		{
 			name: "keypair only",
-			constructor: func() (*WatchedServerConfig, error) {
-				return NewWatchedServerConfig(logger, nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.WatchedServerConfig, error) {
+				return certloader.NewWatchedServerConfig(logger, nil, hubble.certFile, hubble.privkeyFile)
 			},
 			isMutualTLS: false,
 		},
 		{
 			name: "CA and keypair",
-			constructor: func() (*WatchedServerConfig, error) {
-				return NewWatchedServerConfig(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.WatchedServerConfig, error) {
+				return certloader.NewWatchedServerConfig(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			isMutualTLS: true,
 		},
@@ -87,7 +88,7 @@ func TestFutureWatchedServerConfig(t *testing.T) {
 	defer cleanup(dir)
 	logger := hivetest.Logger(t)
 
-	ch, err := FutureWatchedServerConfig(t.Context(), logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	ch, err := certloader.FutureWatchedServerConfig(t.Context(), logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 
 	// the files don't exists, expect the config to not be ready yet.
@@ -125,7 +126,7 @@ func TestNewWatchedServerConfig(t *testing.T) {
 		t.Fatal("tls.X509KeyPair", err)
 	}
 
-	s, err := NewWatchedServerConfig(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	s, err := certloader.NewWatchedServerConfig(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 	defer s.Stop()
@@ -143,7 +144,7 @@ func TestNewWatchedServerConfig(t *testing.T) {
 	// Check that our base option is honored.
 	assert.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
 	// check that the ALPN protocol is set.
-	assert.Contains(t, tlsConfig.NextProtos, alpnProtocolH2)
+	assert.Contains(t, tlsConfig.NextProtos, certloader.AlpnProtocolH2)
 }
 
 func TestWatchedServerConfigRotation(t *testing.T) {
@@ -165,19 +166,19 @@ func TestWatchedServerConfigRotation(t *testing.T) {
 		t.Fatal("tls.X509KeyPair", err)
 	}
 
-	s, err := NewWatchedServerConfig(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	s, err := certloader.NewWatchedServerConfig(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 	assert.NotNil(t, s)
 	defer s.Stop()
 
-	prevKeypairGeneration, prevCaCertPoolGeneration := s.generations()
+	prevKeypairGeneration, prevCaCertPoolGeneration := s.Generations()
 	rotate(t, hubble, relay)
 
 	// wait until both keypair and caCertPool have been reloaded
 	ticker := time.NewTicker(testReloadDelay)
 	defer ticker.Stop()
 	for range ticker.C {
-		keypairGeneration, caCertPoolGeneration := s.generations()
+		keypairGeneration, caCertPoolGeneration := s.Generations()
 		keypairUpdated := keypairGeneration > prevKeypairGeneration
 		caCertPoolUpdated := caCertPoolGeneration > prevCaCertPoolGeneration
 		if keypairUpdated && caCertPoolUpdated {
@@ -198,5 +199,5 @@ func TestWatchedServerConfigRotation(t *testing.T) {
 	// Check that our base option is honored.
 	assert.Equal(t, uint16(tls.VersionTLS13), tlsConfig.MinVersion)
 	// check that the ALPN protocol is set.
-	assert.Contains(t, tlsConfig.NextProtos, alpnProtocolH2)
+	assert.Contains(t, tlsConfig.NextProtos, certloader.AlpnProtocolH2)
 }

@@ -21,6 +21,7 @@ const (
 
 	CASecretName     = "cilium-ca"
 	CASecretCertName = "ca.crt"
+	CASecretKeyName  = "ca.key"
 
 	EncryptionSecretName = "cilium-ipsec-keys"
 

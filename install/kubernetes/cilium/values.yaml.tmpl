@@ -3075,6 +3075,12 @@ operator:
       # @schema
       # -- Metrics relabeling configs for the ServiceMonitor cilium-operator
       metricRelabelings: ~
+    # -- TLS configuration for Prometheus
+    tls:
+      enabled: false
+      server:
+        # -- Name of the Secret containing the certificate and key for the Prometheus server.
+        existingSecret: ""
   # -- Grafana dashboards for cilium-operator
   # grafana can import dashboards based on the label and value
   # ref: https://github.com/grafana/helm-charts/tree/main/charts/grafana#sidecar-for-dashboards

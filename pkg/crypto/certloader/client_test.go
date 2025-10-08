@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Authors of Cilium
 
-package certloader
+package certloader_test
 
 import (
 	"crypto/tls"
@@ -12,6 +12,7 @@ import (
 	"github.com/cilium/hive/hivetest"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/cilium/cilium/pkg/crypto/certloader"
 	"github.com/cilium/cilium/pkg/testutils"
 )
 
@@ -27,34 +28,34 @@ func TestWatchedClientConfigIsMutualTLS(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		constructor func() (*WatchedClientConfig, error)
+		constructor func() (*certloader.WatchedClientConfig, error)
 		isMutualTLS bool
 	}{
 		{
 			name: "empty",
-			constructor: func() (*WatchedClientConfig, error) {
-				return NewWatchedClientConfig(logger, nil, "", "")
+			constructor: func() (*certloader.WatchedClientConfig, error) {
+				return certloader.NewWatchedClientConfig(logger, nil, "", "")
 			},
 			isMutualTLS: false,
 		},
 		{
 			name: "keypair only",
-			constructor: func() (*WatchedClientConfig, error) {
-				return NewWatchedClientConfig(logger, nil, relay.certFile, relay.privkeyFile)
+			constructor: func() (*certloader.WatchedClientConfig, error) {
+				return certloader.NewWatchedClientConfig(logger, nil, relay.certFile, relay.privkeyFile)
 			},
 			isMutualTLS: true,
 		},
 		{
 			name: "CA only",
-			constructor: func() (*WatchedClientConfig, error) {
-				return NewWatchedClientConfig(logger, hubble.caFiles, "", "")
+			constructor: func() (*certloader.WatchedClientConfig, error) {
+				return certloader.NewWatchedClientConfig(logger, hubble.caFiles, "", "")
 			},
 			isMutualTLS: false,
 		},
 		{
 			name: "CA and keypair",
-			constructor: func() (*WatchedClientConfig, error) {
-				return NewWatchedClientConfig(logger, hubble.caFiles, relay.certFile, relay.privkeyFile)
+			constructor: func() (*certloader.WatchedClientConfig, error) {
+				return certloader.NewWatchedClientConfig(logger, hubble.caFiles, relay.certFile, relay.privkeyFile)
 			},
 			isMutualTLS: true,
 		},
@@ -88,13 +89,13 @@ func TestFutureWatchedClientConfig(t *testing.T) {
 	defer cleanup(dir)
 	logger := hivetest.Logger(t)
 
-	ch, err := FutureWatchedClientConfig(t.Context(), logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	ch, err := certloader.FutureWatchedClientConfig(t.Context(), logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 
 	// the files don't exists, expect the config to not be ready yet.
 	select {
 	case <-ch:
-		t.Fatal("FutureWatchedClientConfig should not be ready without the TLS files")
+		t.Fatal("Futurecertloader.WatchedClientConfig should not be ready without the TLS files")
 	case <-time.After(testReloadDelay):
 	}
 
@@ -126,7 +127,7 @@ func TestNewWatchedClientConfig(t *testing.T) {
 		t.Fatal("tls.X509KeyPair", err)
 	}
 
-	c, err := NewWatchedClientConfig(logger, hubble.caFiles, relay.certFile, relay.privkeyFile)
+	c, err := certloader.NewWatchedClientConfig(logger, hubble.caFiles, relay.certFile, relay.privkeyFile)
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 	defer c.Stop()
@@ -159,7 +160,7 @@ func TestNewWatchedClientConfigWithoutClientCert(t *testing.T) {
 		t.Fatal("AppendCertsFromPEM", initialHubbleServerCA)
 	}
 
-	c, err := NewWatchedClientConfig(logger, hubble.caFiles, "", "")
+	c, err := certloader.NewWatchedClientConfig(logger, hubble.caFiles, "", "")
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 	defer c.Stop()
@@ -191,19 +192,19 @@ func TestWatchedClientConfigRotation(t *testing.T) {
 		t.Fatal("tls.X509KeyPair", err)
 	}
 
-	c, err := NewWatchedClientConfig(logger, hubble.caFiles, relay.certFile, relay.privkeyFile)
+	c, err := certloader.NewWatchedClientConfig(logger, hubble.caFiles, relay.certFile, relay.privkeyFile)
 	assert.NoError(t, err)
 	assert.NotNil(t, c)
 	defer c.Stop()
 
-	prevKeypairGeneration, prevCaCertPoolGeneration := c.generations()
+	prevKeypairGeneration, prevCaCertPoolGeneration := c.Generations()
 	rotate(t, hubble, relay)
 
 	// wait until both keypair and caCertPool have been reloaded
 	ticker := time.NewTicker(testReloadDelay)
 	defer ticker.Stop()
 	for range ticker.C {
-		keypairGeneration, caCertPoolGeneration := c.generations()
+		keypairGeneration, caCertPoolGeneration := c.Generations()
 		keypairUpdated := keypairGeneration > prevKeypairGeneration
 		caCertPoolUpdated := caCertPoolGeneration > prevCaCertPoolGeneration
 		if keypairUpdated && caCertPoolUpdated {

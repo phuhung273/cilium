@@ -24,6 +24,7 @@ var Cell = cell.Module("metrics", "Metrics",
 		metricsCommands,
 		newSampler,
 	),
+	CertloaderGroup,
 )
 
 // AgentCell provides metrics for the Cilium Agent. Includes [Cell] and sets up the global registry

@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Authors of Cilium
 
-package certloader
+package certloader_test
 
 import (
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/cilium/cilium/pkg/crypto/certloader"
 )
 
 // testReloadDelay is the time we expect Watcher to take to reload the files
-const testReloadDelay = watcherEventCoalesceWindow + 100*time.Millisecond
+const testReloadDelay = certloader.WatcherEventCoalesceWindow + 100*time.Millisecond
 
 /* initial tls files */
 

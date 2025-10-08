@@ -13,7 +13,7 @@ import (
 	"github.com/cilium/cilium/pkg/logging/logfields"
 )
 
-var alpnProtocolH2 = "h2"
+var AlpnProtocolH2 = "h2"
 
 // ServerConfigBuilder creates tls.Config to be used as TLS server.
 type ServerConfigBuilder interface {
@@ -139,10 +139,10 @@ func (c *WatchedServerConfig) ServerConfig(base *tls.Config) *tls.Config {
 
 // constructWithH2ProtoIfNeed constructs a new slice of protocols with h2
 func constructWithH2ProtoIfNeed(existingProtocols []string) []string {
-	if slices.Contains(existingProtocols, alpnProtocolH2) {
+	if slices.Contains(existingProtocols, AlpnProtocolH2) {
 		return existingProtocols
 	}
 	ret := make([]string, 0, len(existingProtocols)+1)
 	ret = append(ret, existingProtocols...)
-	return append(ret, alpnProtocolH2)
+	return append(ret, AlpnProtocolH2)
 }

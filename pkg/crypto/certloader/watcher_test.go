@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Authors of Cilium
 
-package certloader
+package certloader_test
 
 import (
 	"crypto/tls"
@@ -12,6 +12,7 @@ import (
 	"github.com/cilium/hive/hivetest"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/cilium/cilium/pkg/crypto/certloader"
 	"github.com/cilium/cilium/pkg/testutils"
 )
 
@@ -20,7 +21,7 @@ func TestNewWatcherError(t *testing.T) {
 	defer cleanup(dir)
 	logger := hivetest.Logger(t)
 
-	_, err := NewWatcher(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	_, err := certloader.NewWatcher(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.Error(t, err)
 }
 
@@ -43,7 +44,7 @@ func TestNewWatcher(t *testing.T) {
 		t.Fatal("tls.X509KeyPair", err)
 	}
 
-	w, err := NewWatcher(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	w, err := certloader.NewWatcher(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 	defer w.Stop()
 
@@ -71,18 +72,18 @@ func TestRotation(t *testing.T) {
 		t.Fatal("tls.X509KeyPair", err)
 	}
 
-	w, err := NewWatcher(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	w, err := certloader.NewWatcher(logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 	defer w.Stop()
 
-	prevKeypairGeneration, prevCaCertPoolGeneration := w.generations()
+	prevKeypairGeneration, prevCaCertPoolGeneration := w.Generations()
 	rotate(t, hubble, relay)
 
 	// wait until both keypair and caCertPool have been reloaded
 	ticker := time.NewTicker(testReloadDelay)
 	defer ticker.Stop()
 	for range ticker.C {
-		keypairGeneration, caCertPoolGeneration := w.generations()
+		keypairGeneration, caCertPoolGeneration := w.Generations()
 		keypairUpdated := keypairGeneration > prevKeypairGeneration
 		caCertPoolUpdated := caCertPoolGeneration > prevCaCertPoolGeneration
 		if keypairUpdated && caCertPoolUpdated {
@@ -114,7 +115,7 @@ func TestFutureWatcherImmediately(t *testing.T) {
 		t.Fatal("tls.X509KeyPair", err)
 	}
 
-	ch, err := FutureWatcher(t.Context(), logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	ch, err := certloader.FutureWatcher(t.Context(), logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 
 	// the files already exists, expect the watcher to be readily available.
@@ -146,11 +147,11 @@ func TestFutureWatcher(t *testing.T) {
 		t.Fatal("tls.X509KeyPair", err)
 	}
 
-	ch, err := FutureWatcher(t.Context(), logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	ch, err := certloader.FutureWatcher(t.Context(), logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 
 	// the files don't exists, expect the watcher to not be ready yet.
-	var w *Watcher
+	var w *certloader.Watcher
 	select {
 	case <-ch:
 		t.Fatal("FutureWatcher should not be ready without the TLS files")
@@ -181,7 +182,7 @@ func TestFutureWatcherShutdownBeforeReady(t *testing.T) {
 	// before returning a watcher. We use goleak to validate that the
 	// goroutine does not leak files never become ready before the context
 	// is cancelled.
-	ch, err := FutureWatcher(t.Context(), logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	ch, err := certloader.FutureWatcher(t.Context(), logger, relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 
 	// the files don't exists, expect the watcher to not be ready after a delay
@@ -201,7 +202,7 @@ func TestKubernetesMount(t *testing.T) {
 	defer cleanup(dir)
 	logger := hivetest.Logger(t)
 
-	ch, err := FutureWatcher(t.Context(), logger, hubble.caFiles, hubble.certFile, hubble.privkeyFile)
+	ch, err := certloader.FutureWatcher(t.Context(), logger, hubble.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 
 	// the files don't exists, expect the watcher to not be ready yet.
@@ -231,14 +232,14 @@ func TestKubernetesMount(t *testing.T) {
 	assert.Equal(t, &expectedInitialKeypair, keypair)
 	assert.Equal(t, expectedInitialCaCertPool.Subjects(), caCertPool.Subjects())
 
-	prevKeypairGeneration, prevCaCertPoolGeneration := w.generations()
+	prevKeypairGeneration, prevCaCertPoolGeneration := w.Generations()
 	k8sRotate(t, dir)
 
 	// wait until both keypair and caCertPool have been reloaded
 	ticker := time.NewTicker(testReloadDelay)
 	defer ticker.Stop()
 	for range ticker.C {
-		keypairGeneration, caCertPoolGeneration := w.generations()
+		keypairGeneration, caCertPoolGeneration := w.Generations()
 		keypairUpdated := keypairGeneration > prevKeypairGeneration
 		caCertPoolUpdated := caCertPoolGeneration > prevCaCertPoolGeneration
 		if keypairUpdated && caCertPoolUpdated {

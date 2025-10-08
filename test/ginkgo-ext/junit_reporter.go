@@ -335,6 +335,8 @@ func (reporter *JUnitReporter) mapTestToCODEOWNER(prefix string) string {
 		return "test/k8s/kafka_policies.go"
 	case "K8sSpecificMACAddressTests":
 		return "test/k8s/pod_mac_address.go"
+	case "K8sOperatorTest":
+		return "test/k8s/operator.go"
 	}
 	return ""
 }

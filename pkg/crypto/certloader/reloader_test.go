@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Authors of Cilium
 
-package certloader
+package certloader_test
 
 import (
 	"crypto/tls"
@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/cilium/cilium/pkg/crypto/certloader"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,17 +18,17 @@ func TestNewFileReloaderErrors(t *testing.T) {
 	setup(t, hubble, relay)
 	defer cleanup(dir)
 
-	_, err := NewFileReloaderReady(relay.caFiles, hubble.certFile, "")
-	assert.Equal(t, err, ErrInvalidKeypair)
+	_, err := certloader.NewFileReloaderReady(relay.caFiles, hubble.certFile, "")
+	assert.Equal(t, err, certloader.ErrInvalidKeypair)
 
-	_, err = NewFileReloaderReady(relay.caFiles, "", hubble.privkeyFile)
-	assert.Equal(t, err, ErrInvalidKeypair)
+	_, err = certloader.NewFileReloaderReady(relay.caFiles, "", hubble.privkeyFile)
+	assert.Equal(t, err, certloader.ErrInvalidKeypair)
 
-	_, err = NewFileReloader(relay.caFiles, hubble.certFile, "")
-	assert.Equal(t, err, ErrInvalidKeypair)
+	_, err = certloader.NewFileReloader(relay.caFiles, hubble.certFile, "")
+	assert.Equal(t, err, certloader.ErrInvalidKeypair)
 
-	_, err = NewFileReloader(relay.caFiles, "", hubble.privkeyFile)
-	assert.Equal(t, err, ErrInvalidKeypair)
+	_, err = certloader.NewFileReloader(relay.caFiles, "", hubble.privkeyFile)
+	assert.Equal(t, err, certloader.ErrInvalidKeypair)
 }
 
 func TestHasKeypair(t *testing.T) {
@@ -37,62 +38,62 @@ func TestHasKeypair(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		constructor func() (*FileReloader, error)
+		constructor func() (*certloader.FileReloader, error)
 		hasKeypair  bool
 	}{
 		{
 			name: "empty (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(nil, "", "")
 			},
 			hasKeypair: false,
 		},
 		{
 			name: "empty",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, "", "")
 			},
 			hasKeypair: false,
 		},
 		{
 			name: "keypair only (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			hasKeypair: true,
 		},
 		{
 			name: "keypair only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			hasKeypair: true,
 		},
 		{
 			name: "CA only (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(relay.caFiles, "", "")
 			},
 			hasKeypair: false,
 		},
 		{
 			name: "CA only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, "", "")
 			},
 			hasKeypair: false,
 		},
 		{
 			name: "CA and keypair (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			hasKeypair: true,
 		},
 		{
 			name: "CA and keypair",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			hasKeypair: true,
 		},
@@ -121,62 +122,62 @@ func TestHasCustomCA(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		constructor func() (*FileReloader, error)
+		constructor func() (*certloader.FileReloader, error)
 		hasCustomCA bool
 	}{
 		{
 			name: "empty (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(nil, "", "")
 			},
 			hasCustomCA: false,
 		},
 		{
 			name: "empty",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, "", "")
 			},
 			hasCustomCA: false,
 		},
 		{
 			name: "keypair only (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			hasCustomCA: false,
 		},
 		{
 			name: "keypair only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			hasCustomCA: false,
 		},
 		{
 			name: "CA only (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(relay.caFiles, "", "")
 			},
 			hasCustomCA: true,
 		},
 		{
 			name: "CA only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, "", "")
 			},
 			hasCustomCA: true,
 		},
 		{
 			name: "CA and keypair (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			hasCustomCA: true,
 		},
 		{
 			name: "CA and keypair",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			hasCustomCA: true,
 		},
@@ -205,62 +206,62 @@ func TestReady(t *testing.T) {
 
 	tests := []struct {
 		name        string
-		constructor func() (*FileReloader, error)
+		constructor func() (*certloader.FileReloader, error)
 		isReady     bool
 	}{
 		{
 			name: "empty (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(nil, "", "")
 			},
 			isReady: true,
 		},
 		{
 			name: "empty",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, "", "")
 			},
 			isReady: true,
 		},
 		{
 			name: "keypair only (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			isReady: true,
 		},
 		{
 			name: "keypair only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			isReady: false,
 		},
 		{
 			name: "CA only (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(relay.caFiles, "", "")
 			},
 			isReady: true,
 		},
 		{
 			name: "CA only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, "", "")
 			},
 			isReady: false,
 		},
 		{
 			name: "CA and keypair (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			isReady: true,
 		},
 		{
 			name: "CA and keypair",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			isReady: false,
 		},
@@ -299,70 +300,70 @@ func TestKeypairAndCACertPool(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		constructor        func() (*FileReloader, error)
+		constructor        func() (*certloader.FileReloader, error)
 		expectedKeypair    *tls.Certificate
 		expectedCaCertPool *x509.CertPool
 	}{
 		{
 			name: "empty (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(nil, "", "")
 			},
 			expectedKeypair:    nil,
 			expectedCaCertPool: nil,
 		},
 		{
 			name: "empty",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, "", "")
 			},
 			expectedKeypair:    nil,
 			expectedCaCertPool: nil,
 		},
 		{
 			name: "keypair only (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			expectedKeypair:    &hubbleKeypair,
 			expectedCaCertPool: nil,
 		},
 		{
 			name: "keypair only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			expectedKeypair:    nil,
 			expectedCaCertPool: nil,
 		},
 		{
 			name: "CA only (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(relay.caFiles, "", "")
 			},
 			expectedKeypair:    nil,
 			expectedCaCertPool: hubbleCaCertPool,
 		},
 		{
 			name: "CA only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, "", "")
 			},
 			expectedKeypair:    nil,
 			expectedCaCertPool: nil,
 		},
 		{
 			name: "CA and keypair (ready)",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloaderReady(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloaderReady(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			expectedKeypair:    &hubbleKeypair,
 			expectedCaCertPool: hubbleCaCertPool,
 		},
 		{
 			name: "CA and keypair",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			expectedKeypair:    nil,
 			expectedCaCertPool: nil,
@@ -404,38 +405,38 @@ func TestPrivilegedReload(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		constructor        func() (*FileReloader, error)
+		constructor        func() (*certloader.FileReloader, error)
 		expectedKeypair    *tls.Certificate
 		expectedCaCertPool *x509.CertPool
 	}{
 		{
 			name: "empty",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, "", "")
 			},
 			expectedKeypair:    nil,
 			expectedCaCertPool: nil,
 		},
 		{
 			name: "keypair only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			expectedKeypair:    &hubbleKeypair,
 			expectedCaCertPool: nil,
 		},
 		{
 			name: "CA only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, "", "")
 			},
 			expectedKeypair:    nil,
 			expectedCaCertPool: hubbleCaCertPool,
 		},
 		{
 			name: "CA and keypair",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			expectedKeypair:    &hubbleKeypair,
 			expectedCaCertPool: hubbleCaCertPool,
@@ -449,7 +450,7 @@ func TestPrivilegedReload(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			prevKeypairGeneration, prevCaCertPoolGeneration := r.generations()
+			prevKeypairGeneration, prevCaCertPoolGeneration := r.Generations()
 			keypair, caCertPool, err := r.Reload()
 			assert.NoError(t, err)
 			// keypair check
@@ -461,7 +462,7 @@ func TestPrivilegedReload(t *testing.T) {
 				assert.Nil(t, caCertPool)
 			}
 			// generations check
-			keypairGeneration, caCertPoolGeneration := r.generations()
+			keypairGeneration, caCertPoolGeneration := r.Generations()
 			if tt.expectedKeypair != nil {
 				assert.Equal(t, prevKeypairGeneration+1, keypairGeneration)
 			} else {
@@ -496,34 +497,34 @@ func TestReloadKeypair(t *testing.T) {
 
 	tests := []struct {
 		name            string
-		constructor     func() (*FileReloader, error)
+		constructor     func() (*certloader.FileReloader, error)
 		expectedKeypair *tls.Certificate
 	}{
 		{
 			name: "empty",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, "", "")
 			},
 			expectedKeypair: nil,
 		},
 		{
 			name: "keypair only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			expectedKeypair: &hubbleKeypair,
 		},
 		{
 			name: "CA only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, "", "")
 			},
 			expectedKeypair: nil,
 		},
 		{
 			name: "CA and keypair",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			expectedKeypair: &hubbleKeypair,
 		},
@@ -536,13 +537,13 @@ func TestReloadKeypair(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			prevKeypairGeneration, _ := r.generations()
+			prevKeypairGeneration, _ := r.Generations()
 			keypair, err := r.ReloadKeypair()
 			assert.NoError(t, err)
 			// keypair check
 			assert.Equal(t, tt.expectedKeypair, keypair)
 			// generations check
-			keypairGeneration, _ := r.generations()
+			keypairGeneration, _ := r.Generations()
 			if tt.expectedKeypair != nil {
 				assert.Equal(t, prevKeypairGeneration+1, keypairGeneration)
 			} else {
@@ -568,34 +569,34 @@ func TestReloadCA(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		constructor        func() (*FileReloader, error)
+		constructor        func() (*certloader.FileReloader, error)
 		expectedCaCertPool *x509.CertPool
 	}{
 		{
 			name: "empty",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, "", "")
 			},
 			expectedCaCertPool: nil,
 		},
 		{
 			name: "keypair only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(nil, hubble.certFile, hubble.privkeyFile)
 			},
 			expectedCaCertPool: nil,
 		},
 		{
 			name: "CA only",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, "", "")
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, "", "")
 			},
 			expectedCaCertPool: hubbleCaCertPool,
 		},
 		{
 			name: "CA and keypair",
-			constructor: func() (*FileReloader, error) {
-				return NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+			constructor: func() (*certloader.FileReloader, error) {
+				return certloader.NewFileReloader(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 			},
 			expectedCaCertPool: hubbleCaCertPool,
 		},
@@ -608,7 +609,7 @@ func TestReloadCA(t *testing.T) {
 				t.Error(err)
 				return
 			}
-			_, prevCaCertPoolGeneration := r.generations()
+			_, prevCaCertPoolGeneration := r.Generations()
 			caCertPool, err := r.ReloadCA()
 			assert.NoError(t, err)
 			// caCertPool check
@@ -618,7 +619,7 @@ func TestReloadCA(t *testing.T) {
 				assert.Nil(t, caCertPool)
 			}
 			// generations check
-			_, caCertPoolGeneration := r.generations()
+			_, caCertPoolGeneration := r.Generations()
 			if tt.expectedCaCertPool != nil {
 				assert.Equal(t, prevCaCertPoolGeneration+1, caCertPoolGeneration)
 			} else {
@@ -650,7 +651,7 @@ func TestReloadError(t *testing.T) {
 		t.Fatal("tls.X509KeyPair", err)
 	}
 
-	r, err := NewFileReloaderReady(relay.caFiles, hubble.certFile, hubble.privkeyFile)
+	r, err := certloader.NewFileReloaderReady(relay.caFiles, hubble.certFile, hubble.privkeyFile)
 	assert.NoError(t, err)
 	assert.NotNil(t, r)
 	assert.True(t, r.Ready())
@@ -665,7 +666,7 @@ func TestReloadError(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	prevKeypairGeneration, prevCaCertPoolGeneration := r.generations()
+	prevKeypairGeneration, prevCaCertPoolGeneration := r.Generations()
 	_, _, err = r.Reload()
 	assert.Error(t, err)
 
@@ -674,7 +675,7 @@ func TestReloadError(t *testing.T) {
 	assert.Equal(t, &expectedKeypair, keypair)
 	assert.Equal(t, expectedCaCertPool.Subjects(), caCertPool.Subjects())
 	// generations should not have changed
-	keypairGeneration, caCertPoolGeneration := r.generations()
+	keypairGeneration, caCertPoolGeneration := r.Generations()
 	assert.Equal(t, prevKeypairGeneration, keypairGeneration)
 	assert.Equal(t, prevCaCertPoolGeneration, caCertPoolGeneration)
 }

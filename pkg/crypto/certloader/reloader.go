@@ -20,7 +20,7 @@ type FileReloader struct {
 	// caFiles, certFile, and privkeyFile are constants for the FileReloader's
 	// lifetime, thus accessing them doesn't require acquiring the mutex.
 	caFiles     []string
-	certFile    string
+	CertFile    string
 	privkeyFile string
 	mutex       lock.Mutex
 	// fields below should only be accessed with mutex acquired as they may be
@@ -67,7 +67,7 @@ func NewFileReloader(caFiles []string, certFile, privkeyFile string) (*FileReloa
 
 	r := &FileReloader{
 		caFiles:     caFiles,
-		certFile:    certFile,
+		CertFile:    certFile,
 		privkeyFile: privkeyFile,
 	}
 
@@ -77,7 +77,7 @@ func NewFileReloader(caFiles []string, certFile, privkeyFile string) (*FileReloa
 // HasKeypair returns true when the FileReloader contains both a certificate
 // and its private key, false otherwise.
 func (r *FileReloader) HasKeypair() bool {
-	return r.certFile != "" && r.privkeyFile != ""
+	return r.CertFile != "" && r.privkeyFile != ""
 }
 
 // HasCustomCA returns true when the FileReloader has custom CAs configured,
@@ -174,7 +174,7 @@ func (r *FileReloader) ReloadCA() (*x509.CertPool, error) {
 
 // readKeypair read the certificate and private key.
 func (r *FileReloader) readKeypair() (*tls.Certificate, error) {
-	keypair, err := tls.LoadX509KeyPair(r.certFile, r.privkeyFile)
+	keypair, err := tls.LoadX509KeyPair(r.CertFile, r.privkeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load keypair: %w", err)
 	}
@@ -197,7 +197,7 @@ func (r *FileReloader) readCertificateAuthority() (*x509.CertPool, error) {
 }
 
 // generations returns the keypair and caCertPool generation counters.
-func (r *FileReloader) generations() (uint, uint) {
+func (r *FileReloader) Generations() (uint, uint) {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 	return r.keypairGeneration, r.caCertPoolGeneration

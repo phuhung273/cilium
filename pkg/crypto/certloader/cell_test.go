@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright Authors of Cilium
 
-package certloader
+package certloader_test
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/require"
 
+	"github.com/cilium/cilium/pkg/crypto/certloader"
 	"github.com/cilium/cilium/pkg/hive"
 	"github.com/cilium/cilium/pkg/promise"
 	"github.com/cilium/cilium/pkg/testutils"
@@ -30,7 +31,7 @@ func TestCell(t *testing.T) {
 	// init hive
 	ctx := t.Context()
 	var err error
-	var serverConfig *WatchedServerConfig
+	var serverConfig *certloader.WatchedServerConfig
 
 	config := testConfig{
 		TLS:              true,
@@ -40,12 +41,12 @@ func TestCell(t *testing.T) {
 	}
 
 	hive := hive.New(
-		cell.ProvidePrivate(func(cfg testConfig) Config {
-			return Config(cfg)
+		cell.ProvidePrivate(func(cfg testConfig) certloader.Config {
+			return certloader.Config(cfg)
 		}),
-		cell.Provide(NewWatchedServerConfigPromise),
+		cell.Provide(certloader.NewWatchedServerConfigPromise),
 		cell.Config(config),
-		cell.Invoke(func(p promise.Promise[*WatchedServerConfig]) {
+		cell.Invoke(func(p promise.Promise[*certloader.WatchedServerConfig]) {
 			if p != nil {
 				go func() {
 					serverConfig, err = p.Await(ctx)
@@ -74,7 +75,7 @@ func TestCell(t *testing.T) {
 	}()
 
 	require.Eventually(t, func() bool {
-		return err == nil && serverConfig != nil && serverConfig.certFile == config.TLSCertFile
+		return err == nil && serverConfig != nil && serverConfig.CertFile == config.TLSCertFile
 	}, 5*time.Second, 100*time.Millisecond, "TLS server config promise should resolve after a delay")
 
 	if err := hive.Stop(tlog, ctx); err != nil && !errors.Is(err, context.Canceled) {
@@ -90,18 +91,18 @@ func TestCellConfigError(t *testing.T) {
 	// init hive
 	ctx := t.Context()
 	var err error
-	var serverConfig *WatchedServerConfig
+	var serverConfig *certloader.WatchedServerConfig
 
 	hive := hive.New(
-		cell.ProvidePrivate(func(cfg testConfig) Config {
-			return Config(cfg)
+		cell.ProvidePrivate(func(cfg testConfig) certloader.Config {
+			return certloader.Config(cfg)
 		}),
-		cell.Provide(NewWatchedServerConfigPromise),
+		cell.Provide(certloader.NewWatchedServerConfigPromise),
 		//exhaustruct:ignore
 		cell.Config(testConfig{
 			TLS: true,
 		}),
-		cell.Invoke(func(p promise.Promise[*WatchedServerConfig]) {
+		cell.Invoke(func(p promise.Promise[*certloader.WatchedServerConfig]) {
 			if p != nil {
 				go func() {
 					serverConfig, err = p.Await(ctx)
@@ -143,7 +144,7 @@ func TestCellShutdown(t *testing.T) {
 
 	// init hive
 	ctx := t.Context()
-	var serverConfig *WatchedServerConfig
+	var serverConfig *certloader.WatchedServerConfig
 
 	config := testConfig{
 		TLS:              true,
@@ -153,12 +154,12 @@ func TestCellShutdown(t *testing.T) {
 	}
 
 	hive := hive.New(
-		cell.ProvidePrivate(func(cfg testConfig) Config {
-			return Config(cfg)
+		cell.ProvidePrivate(func(cfg testConfig) certloader.Config {
+			return certloader.Config(cfg)
 		}),
-		cell.Provide(NewWatchedServerConfigPromise),
+		cell.Provide(certloader.NewWatchedServerConfigPromise),
 		cell.Config(config),
-		cell.Invoke(func(p promise.Promise[*WatchedServerConfig]) {
+		cell.Invoke(func(p promise.Promise[*certloader.WatchedServerConfig]) {
 			if p != nil {
 				go func() {
 					serverConfig, _ = p.Await(ctx)
@@ -193,18 +194,18 @@ func TestCellDisabled(t *testing.T) {
 	})
 
 	ctx := t.Context()
-	var cfgPromise promise.Promise[*WatchedServerConfig]
+	var cfgPromise promise.Promise[*certloader.WatchedServerConfig]
 
 	hive := hive.New(
-		cell.ProvidePrivate(func(cfg testConfig) Config {
-			return Config(cfg)
+		cell.ProvidePrivate(func(cfg testConfig) certloader.Config {
+			return certloader.Config(cfg)
 		}),
-		cell.Provide(NewWatchedServerConfigPromise),
+		cell.Provide(certloader.NewWatchedServerConfigPromise),
 		//exhaustruct:ignore
 		cell.Config(testConfig{
 			TLS: false,
 		}),
-		cell.Invoke(func(p promise.Promise[*WatchedServerConfig]) {
+		cell.Invoke(func(p promise.Promise[*certloader.WatchedServerConfig]) {
 			cfgPromise = p
 		}),
 	)

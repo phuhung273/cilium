@@ -79,5 +79,5 @@ func initializeMetrics(p params) {
 	p.Registry.MustRegister(metrics.ErrorsWarnings)
 	metrics.FlushLoggingMetrics()
 
-	p.Registry.AddServerRuntimeHooks()
+	p.Registry.AddServerRuntimeHooks(p.Logger)
 }
