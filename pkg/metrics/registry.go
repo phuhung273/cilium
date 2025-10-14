@@ -4,6 +4,8 @@
 package metrics
 
 import (
+	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -69,6 +71,8 @@ type Registry struct {
 	collectors collectorSet
 
 	params RegistryParams
+
+	server *http.Server
 }
 
 // Gather exposes metrics gather functionality, used by operator metrics command.
@@ -78,31 +82,56 @@ func (reg *Registry) Gather() ([]*dto.MetricFamily, error) {
 
 func (reg *Registry) AddServerRuntimeHooks() {
 	if reg.params.Config.PrometheusServeAddr != "" {
-		// The Handler function provides a default handler to expose metrics
-		// via an HTTP server. "/metrics" is the usual endpoint for that.
-		mux := http.NewServeMux()
-		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-		srv := http.Server{
-			Addr:    reg.params.Config.PrometheusServeAddr,
-			Handler: mux,
-		}
+		reg.InitalizeServer()
 
 		reg.params.Lifecycle.Append(cell.Hook{
 			OnStart: func(hc cell.HookContext) error {
-				go func() {
-					reg.params.Logger.Info("Serving prometheus metrics", logfields.Address, reg.params.Config.PrometheusServeAddr)
-					err := srv.ListenAndServe()
-					if err != nil && !errors.Is(err, http.ErrServerClosed) {
-						reg.params.Shutdowner.Shutdown(hive.ShutdownWithError(err))
-					}
-				}()
+				go reg.StartServer()
 				return nil
 			},
 			OnStop: func(hc cell.HookContext) error {
-				return srv.Shutdown(hc)
+				return reg.StopServer(hc)
 			},
 		})
 	}
+}
+
+func (reg *Registry) InitalizeServer() {
+	// The Handler function provides a default handler to expose metrics
+	// via an HTTP server. "/metrics" is the usual endpoint for that.
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	reg.server = &http.Server{
+		Addr:    reg.params.Config.PrometheusServeAddr,
+		Handler: mux,
+	}
+}
+
+func (reg *Registry) StartServer() {
+	tlsEnabled := reg.server.TLSConfig != nil
+
+	reg.params.Logger.Info("Serving prometheus metrics",
+		logfields.Address, reg.params.Config.PrometheusServeAddr,
+		logfields.TLS, tlsEnabled,
+	)
+
+	var err error
+	if tlsEnabled {
+		err = reg.server.ListenAndServeTLS("", "")
+	} else {
+		err = reg.server.ListenAndServe()
+	}
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		reg.params.Shutdowner.Shutdown(hive.ShutdownWithError(err))
+	}
+}
+
+func (reg *Registry) ConfigureServerTLS(tlsConfig *tls.Config) {
+	reg.server.TLSConfig = tlsConfig
+}
+
+func (reg *Registry) StopServer(ctx context.Context) error {
+	return reg.server.Shutdown(ctx)
 }
 
 // NewRegistry constructs a new registry that is not initialized with
