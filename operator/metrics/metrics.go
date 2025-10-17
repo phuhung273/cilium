@@ -4,13 +4,10 @@
 package metrics
 
 import (
-	"context"
-	"crypto/tls"
 	"log/slog"
 	"regexp"
 
 	"github.com/cilium/hive/cell"
-	"github.com/cilium/hive/job"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	k8sCtrlMetrics "sigs.k8s.io/controller-runtime/pkg/certwatcher/metrics"
@@ -29,7 +26,6 @@ type params struct {
 	Logger     *slog.Logger
 	Lifecycle  cell.Lifecycle
 	Shutdowner hive.Shutdowner
-	JobGroup   job.Group
 
 	Cfg       Config
 	SharedCfg SharedConfig
@@ -84,30 +80,5 @@ func initializeMetrics(p params) {
 	p.Registry.MustRegister(metrics.ErrorsWarnings)
 	metrics.FlushLoggingMetrics()
 
-	// Initialize Prometheus server with default config
-	p.Registry.InitalizeServer()
-
-	p.JobGroup.Add(job.OneShot("operator-prometheus-server", func(ctx context.Context, _ cell.Health) error {
-		tlsEnabled := p.PrometheusTlsConfigPromise != nil
-		if tlsEnabled {
-			p.Logger.Info("Waiting for TLS certificates to become available")
-			certLoaderWatchedServerConfig, err := p.PrometheusTlsConfigPromise.Await(ctx)
-			if err != nil {
-				return err
-			}
-
-			// Config Prometheus server to run with TLS
-			p.Registry.ConfigureServerTLS(certLoaderWatchedServerConfig.ServerConfig(&tls.Config{
-				MinVersion: tls.VersionTLS13,
-			}))
-		}
-		go p.Registry.StartServer()
-		return nil
-	}))
-
-	p.Lifecycle.Append(cell.Hook{
-		OnStop: func(hc cell.HookContext) error {
-			return p.Registry.StopServer(hc)
-		},
-	})
+	p.Registry.AddServerRuntimeHooks()
 }
