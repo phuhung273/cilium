@@ -368,6 +368,18 @@ const (
 	// PrometheusServeAddr IP:Port on which to serve prometheus metrics (pass ":Port" to bind on all interfaces, "" is off)
 	PrometheusServeAddr = "prometheus-serve-addr"
 
+	// PrometheusEnableTLS enables TLS for prometheus server
+	PrometheusEnableTLS = "prometheus-enable-tls"
+
+	// PrometheusTLSCertFile specifies path to TLS certificate file for prometheus server. The file must contain PEM encoded data
+	PrometheusTLSCertFile = "prometheus-tls-cert-file"
+
+	// PrometheusTLSKeyFile specifies Path to TLS private key file for prometheus server. The file must contain PEM encoded data
+	PrometheusTLSKeyFile = "prometheus-tls-key-file"
+
+	// PrometheusTLSClientCAFiles specifies path to one or more TLS client CA certificates files to use for TLS with mutual authentication (mTLS) for prometheus server. The files must contain PEM encoded data. When provided, this option effectively enables mTLS
+	PrometheusTLSClientCAFiles = "prometheus-tls-client-ca-files"
+
 	// ExternalEnvoyProxy defines whether the Envoy is deployed externally in form of a DaemonSet or not.
 	ExternalEnvoyProxy = "external-envoy-proxy"
 

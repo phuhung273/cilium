@@ -129,7 +129,9 @@ var (
 		cni.Cell,
 
 		// Provide the modular metrics registry, metric HTTP server and legacy metrics cell.
+		certloaderGroup,
 		metrics.AgentCell,
+		cell.Invoke(configPrometheusServer),
 
 		// Provides cilium_datapath_drop/forward Prometheus metrics.
 		metricsmap.Cell,
@@ -455,4 +457,8 @@ func kvstoreLocksGC(logger *slog.Logger, jg job.Group, client kvstore.Client) {
 			return nil
 		}, defaults.KVStoreStaleLockTimeout))
 	}
+}
+
+func configPrometheusServer(reg *metrics.Registry, tlsConfigPromise metrics.TLSConfigPromise) {
+	reg.AddServerRuntimeHooks("agent-prometheus-server", tlsConfigPromise)
 }
